@@ -163,7 +163,7 @@ function App() {
           <Route path="/driverdelivrydata" element={<DriverDliveryData />} />
           <Route path="/driveraccept" element={<DriverAccept />} />
           <Route path="/DriverProfile" element={<DriversDetails />} />
-          <Route path="/notifications" elements={<DriverNotification />}/>
+          {/* <Route path="/notifications" elements={<DriverNotification />}/> */}
           {/* <Route path="/Notifications" element={<Notifications />} /> */}
           <Route path="/adddriver" element={<AddDriver />} />
           <Route path="/driverdetails" element={<DriverDetails />} />

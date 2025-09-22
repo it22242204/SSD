@@ -3,6 +3,14 @@ import "./sidebar.css";
 import Logo from "./img/recycle.png";
 
 const Sidebar = ({ children }) => {
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("email");
+    window.location.href = "/";
+  };
+
   return (
     <div>
       <div className="container_nav">
@@ -89,6 +97,7 @@ const Sidebar = ({ children }) => {
       </div>
       <div className="adminsmalnav">
         <h3>Admin Controller Panel</h3>
+        <button onClick={() => (handleLogout())} >Logout</button>
       </div>
     </div>
   );
