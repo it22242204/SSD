@@ -2,16 +2,15 @@ import React from "react";
 import BeforNav from "./NavBar/BeforNav";
 import "./home.css";
 import Footer from "../../Footer/Footer";
+
 function BeforHome() {
   return (
     <div>
       <BeforNav />
-
       <div className="bkimg">
         <div>
           <div className="dis_div">
             <div>
-              {/* <h1 className="welcome_topic">Welcome ECO-R</h1> */}
               <div className="des">
                 <p className="des1">
                   Welcome to ECO-R Waste Management! At ECO-R, we strive to
@@ -27,18 +26,24 @@ function BeforHome() {
               <div className="welcm">
                 <h1 className="welcome_topic">Welcome ECO-R</h1>
                 <div className="buttongroups">
-                <button
-                  className="welcome_btns"
-                  onClick={() => (window.location.href = "/login")}
-                >
-                  Login
-                </button>
-                <button
+                  <button
+                    className="welcome_btns"
+                    onClick={() => (window.location.href = "/login")}
+                  >
+                    Login
+                  </button>
+                  <button
                     className="welcome_btns"
                     onClick={() => (window.location.href = "/userregister")}
                   >
                     Register
-                  </button>                                  
+                  </button>
+                  <button
+                    className="welcome_btns"
+                    onClick={() => (window.location.href = "http://localhost:8080/auth/google")}
+                  >
+                    Sign in with Google
+                  </button>
                 </div>
               </div>
             </div>
