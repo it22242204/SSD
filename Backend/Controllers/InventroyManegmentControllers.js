@@ -1,106 +1,92 @@
+const sanitize = require("mongo-sanitize");
 const Inventory = require("../Model/InventroyManegmentModel");
 
+// Get all inventory
 const getAllInventory = async (req, res, next) => {
-  let invent;
-  // Get all Inventory
   try {
-    invent = await Inventory.find();
+    const invent = await Inventory.find();
+    if (!invent || invent.length === 0) {
+      return res.status(404).json({ message: "Inventory not found" });
+    }
+    return res.status(200).json({ invent });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  // not found
-  if (!invent) {
-    return res.status(404).json({ message: "Inventory not found" });
-  }
-  // Display all invent
-  return res.status(200).json({ invent });
 };
 
-// data Insert
+// Add a new inventory item
 const addInventory = async (req, res, next) => {
-  const { itemname, quantity, price, description } = req.body;
-
-  let invent;
-
+  const { itemname, quantity, price, description } = sanitize(req.body);
   try {
-    invent = new Inventory({
+    const invent = new Inventory({
       itemname,
       quantity,
       price,
       description,
     });
     await invent.save();
+    return res.status(201).json({ invent });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "unable to add Inventory" });
   }
-  // not insert invents
-  if (!invent) {
-    return res.status(404).json({ message: "unable to add Inventory" });
-  }
-  return res.status(200).json({ invent });
 };
 
-//Get by Id
+// Get inventory item by ID
 const getById = async (req, res, next) => {
-  const id = req.params.id;
-
-  let invent;
-
+  const id = sanitize(req.params.id);
   try {
-    invent = await Inventory.findById(id);
+    const invent = await Inventory.findById(id);
+    if (!invent) {
+      return res.status(404).json({ message: "Inventory Not Found" });
+    }
+    return res.status(200).json({ invent });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  // not available invents
-  if (!invent) {
-    return res.status(404).json({ message: "Inventory Not Found" });
-  }
-  return res.status(200).json({ invent });
 };
 
-//Update invent Details
+// Update inventory item
 const updateInventory = async (req, res, next) => {
-  const id = req.params.id;
-  const { itemname, quantity, price, description } = req.body;
-
-  let invents;
+  const id = sanitize(req.params.id);
+  const { itemname, quantity, price, description } = sanitize(req.body);
 
   try {
-    invents = await Inventory.findByIdAndUpdate(id, {
-      itemname: itemname,
-      quantity: quantity,
-      price: price,
-      description: description,
-    });
-    invents = await invents.save();
+    let invents = await Inventory.findByIdAndUpdate(
+      id,
+      { itemname, quantity, price, description },
+      { new: true }
+    );
+
+    if (!invents) {
+      return res
+        .status(404)
+        .json({ message: "Unable to Update Inventory Details" });
+    }
+    return res.status(200).json({ invents });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  if (!invents) {
-    return res
-      .status(404)
-      .json({ message: "Unable to Update Inventory Details" });
-  }
-  return res.status(200).json({ invents });
 };
 
-//Delete invent Details
+// Delete inventory item
 const deleteInventory = async (req, res, next) => {
-  const id = req.params.id;
-
-  let invent;
-
+  const id = sanitize(req.params.id);
   try {
-    invent = await Inventory.findByIdAndDelete(id);
+    const invent = await Inventory.findByIdAndDelete(id);
+    if (!invent) {
+      return res
+        .status(404)
+        .json({ message: "Unable to Delete Inventory Details" });
+    }
+    return res.status(200).json({ invent });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  if (!invent) {
-    return res
-      .status(404)
-      .json({ message: "Unable to Delete Inventory Details" });
-  }
-  return res.status(200).json({ invent });
 };
 
 exports.getAllInventory = getAllInventory;

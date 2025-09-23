@@ -1,106 +1,88 @@
+const sanitize = require("mongo-sanitize");
 const Inform = require("../Model/informSupplyModel");
 
+// Get all inform entries
 const getAllInform = async (req, res, next) => {
-  let info;
-  // Get all Inform
   try {
-    info = await Inform.find();
+    const info = await Inform.find();
+    if (!info || info.length === 0) {
+      return res.status(404).json({ message: "Inform not found" });
+    }
+    return res.status(200).json({ info });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  // not found
-  if (!info) {
-    return res.status(404).json({ message: "Inform not found" });
-  }
-  // Display all info
-  return res.status(200).json({ info });
 };
 
-// data Insert
+// Add a new inform entry
 const addInform = async (req, res, next) => {
-  const { itemname, quantity, price, description } = req.body;
-
-  let info;
-
+  const { itemname, quantity, price, description } = sanitize(req.body);
   try {
-    info = new Inform({
+    const info = new Inform({
       itemname,
       quantity,
       price,
       description,
     });
     await info.save();
+    return res.status(201).json({ info });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Unable to add Inform" });
   }
-  // not insert infos
-  if (!info) {
-    return res.status(404).json({ message: "unable to add Inform" });
-  }
-  return res.status(200).json({ info });
 };
 
-//Get by Id
+// Get inform entry by ID
 const getById = async (req, res, next) => {
-  const id = req.params.id;
-
-  let info;
-
+  const id = sanitize(req.params.id);
   try {
-    info = await Inform.findById(id);
+    const info = await Inform.findById(id);
+    if (!info) {
+      return res.status(404).json({ message: "Inform Not Found" });
+    }
+    return res.status(200).json({ info });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  // not available infos
-  if (!info) {
-    return res.status(404).json({ message: "Inform Not Found" });
-  }
-  return res.status(200).json({ info });
 };
 
-//Update info Details
+// Update inform entry
 const updateInform = async (req, res, next) => {
-  const id = req.params.id;
-  const { itemname, quantity, price, description } = req.body;
-
-  let infos;
+  const id = sanitize(req.params.id);
+  const { itemname, quantity, price, description } = sanitize(req.body);
 
   try {
-    infos = await Inform.findByIdAndUpdate(id, {
-      itemname: itemname,
-      quantity: quantity,
-      price: price,
-      description: description,
-    });
-    infos = await infos.save();
+    let infos = await Inform.findByIdAndUpdate(
+      id,
+      { itemname, quantity, price, description },
+      { new: true }
+    );
+
+    if (!infos) {
+      return res.status(404).json({ message: "Unable to Update Inform Details" });
+    }
+    return res.status(200).json({ infos });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  if (!infos) {
-    return res
-      .status(404)
-      .json({ message: "Unable to Update Inform Details" });
-  }
-  return res.status(200).json({ infos });
 };
 
-//Delete info Details
+// Delete inform entry
 const deleteInform = async (req, res, next) => {
-  const id = req.params.id;
-
-  let info;
-
+  const id = sanitize(req.params.id);
   try {
-    info = await Inform.findByIdAndDelete(id);
+    const info = await Inform.findByIdAndDelete(id);
+    if (!info) {
+      return res.status(404).json({ message: "Unable to Delete Inform Details" });
+    }
+    return res.status(200).json({ info });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  if (!info) {
-    return res
-      .status(404)
-      .json({ message: "Unable to Delete Inform Details" });
-  }
-  return res.status(200).json({ info });
 };
 
 exports.getAllInform = getAllInform;

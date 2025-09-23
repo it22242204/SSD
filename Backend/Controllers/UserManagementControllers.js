@@ -1,129 +1,149 @@
 const User = require("../Model/UserManagementModel");
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const JWT_SECRET = "sdfgadgnjdfvd225()55757hbbhg77ffrtgfrtrftrftrft745{}[[]99b";
+const sanitize = require("mongo-sanitize");
 
-//data display
+// Get all users (no user input used here)
 const getAllUser = async (req, res, next) => {
-  let user;
-  // Get all Users
   try {
-    user = await User.find();
+    const users = await User.find().select("-password");
+    return res.status(200).json({ status: "ok", users });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ status: "error", message: "Server error" });
   }
-  // not found
-  if (!user) {
-    return res.status(404).json({ message: "user not found" });
-  }
-  // Display all Users
-  return res.status(200).json({ user });
 };
 
-// data Insert
-const addUser = async (req, res, next) => {
-  const { name, email, address, phone, password, confirmPassword } = req.body;
-
-  // Check if password and confirmPassword match
-  if (password !== confirmPassword) {
-    return res.status(400).json({ error: "Passwords do not match" });
-  }
-
-  // Hash the password
-  const encryptedPassword = await bcrypt.hash(password, 10);
-
-  // Check if user already exists
-  const oldUser = await User.findOne({ email });
-  if (oldUser) {
-    return res.status(400).json({ error: "User already exists" });
-  }
-
-  let user;
-
+// Create a new user — validate & sanitize inputs
+const createUser = async (req, res, next) => {
   try {
-    // Create a new user instance with hashed password
-    user = new User({
-      name,
-      email,
-      address,
-      phone,
-      password: encryptedPassword,
-      confirmPassword,
+    const { name, email, password } = req.body || {};
+
+    // Validation
+    if (!name || typeof name !== "string" || name.trim().length < 1) {
+      return res.status(400).json({ error: "Invalid name" });
+    }
+    if (!email || typeof email !== "string" || !/^\S+@\S+\.\S+$/.test(email)) {
+      return res.status(400).json({ error: "Invalid email" });
+    }
+    if (!password || typeof password !== "string" || password.length < 6) {
+      return res.status(400).json({ error: "Invalid password (min 6 chars)" });
+    }
+
+    // Sanitize
+    const safeEmail = sanitize(email);
+    const safeName = sanitize(name);
+    const safePassword = sanitize(password);
+
+    // Check existing user (explicit field)
+    const existing = await User.findOne({ email: safeEmail });
+    if (existing) {
+      return res.status(409).json({ error: "User already exists" });
+    }
+
+    const hashed = await bcrypt.hash(safePassword, 10);
+    const newUser = new User({
+      name: safeName,
+      email: safeEmail,
+      password: hashed,
     });
-    await user.save();
-  } catch (err) {
-    console.log(err);
-    return res.status(500).json({ error: "Unable to add user" });
-  }
+    await newUser.save();
 
-  // Return the added user
-  return res.status(200).json({ user });
+    return res.status(201).json({ status: "ok", userId: newUser._id });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ status: "error", message: "Server error" });
+  }
 };
 
-//Get by Id
-const getById = async (req, res, next) => {
-  const id = req.params.id;
-
-  let user;
-
+// Get user by ID — sanitize params
+const getUserById = async (req, res, next) => {
   try {
-    user = await User.findById(id);
+    const id = sanitize(req.params.id);
+    if (!id) return res.status(400).json({ error: "Invalid id" });
+
+    const user = await User.findById(id).select("-password");
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    return res.status(200).json({ status: "ok", user });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ status: "error", message: "Server error" });
   }
-  // not available Users
-  if (!user) {
-    return res.status(404).json({ message: "user Not Found" });
-  }
-  return res.status(200).json({ user });
 };
 
-//Update User Details
+// Update user details — validate & sanitize each updatable field
 const updateUser = async (req, res, next) => {
-  const id = req.params.id;
-  const { name, email, address, phone, password, confirmPassword } = req.body;
-
-  let users;
-
   try {
-    users = await User.findByIdAndUpdate(id, {
-      name: name,
-      email: email,
-      address: address,
-      phone: phone,
-      password: password,
-      confirmPassword: confirmPassword,
-    });
-    users = await users.save();
+    const id = sanitize(req.params.id);
+    if (!id) return res.status(400).json({ error: "Invalid id" });
+
+    const { name, email, password } = req.body || {};
+    const updates = {};
+
+    if (name !== undefined) {
+      if (typeof name !== "string" || name.trim().length < 1) {
+        return res.status(400).json({ error: "Invalid name" });
+      }
+      updates.name = sanitize(name);
+    }
+
+    if (email !== undefined) {
+      if (typeof email !== "string" || !/^\S+@\S+\.\S+$/.test(email)) {
+        return res.status(400).json({ error: "Invalid email" });
+      }
+      updates.email = sanitize(email);
+
+      // Ensure unique email (explicit query, sanitize)
+      const existing = await User.findOne({ email: updates.email, _id: { $ne: id } });
+      if (existing) {
+        return res.status(409).json({ error: "Email already in use" });
+      }
+    }
+
+    if (password !== undefined) {
+      if (typeof password !== "string" || password.length < 6) {
+        return res.status(400).json({ error: "Invalid password (min 6 chars)" });
+      }
+      const safePassword = sanitize(password);
+      updates.password = await bcrypt.hash(safePassword, 10);
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: "No valid fields to update" });
+    }
+
+    // Note: Add auth check in routes/middleware to ensure only owner/admin can update
+    const updated = await User.findByIdAndUpdate(id, updates, { new: true }).select("-password");
+    if (!updated) return res.status(404).json({ error: "User not found" });
+
+    return res.status(200).json({ status: "ok", user: updated });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ status: "error", message: "Server error" });
   }
-  if (!users) {
-    return res.status(404).json({ message: "Unable to Update users Details" });
-  }
-  return res.status(200).json({ users });
 };
 
-//Delete User Details
+// Delete user — sanitize id param and perform explicit delete
 const deleteUser = async (req, res, next) => {
-  const id = req.params.id;
-
-  let user;
-
   try {
-    user = await User.findByIdAndDelete(id);
+    const id = sanitize(req.params.id);
+    if (!id) return res.status(400).json({ error: "Invalid id" });
+
+    // Note: Add authorization checks in middleware (admin or owner)
+    const deleted = await User.findByIdAndDelete(id);
+    if (!deleted) return res.status(404).json({ error: "User not found" });
+
+    return res.status(200).json({ status: "ok", message: "User deleted" });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ status: "error", message: "Server error" });
   }
-  if (!user) {
-    return res.status(404).json({ message: "Unable to Delete user Details" });
-  }
-  return res.status(200).json({ user });
 };
 
-exports.getAllUser = getAllUser;
-exports.addUser = addUser;
-exports.getById = getById;
-exports.updateUser = updateUser;
-exports.deleteUser = deleteUser;
-
+module.exports = {
+  getAllUser,
+  createUser,
+  getUserById,
+  updateUser,
+  deleteUser,
+};

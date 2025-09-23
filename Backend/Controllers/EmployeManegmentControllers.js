@@ -1,106 +1,92 @@
+const sanitize = require("mongo-sanitize");
 const Employee = require("../Model/EmployeManegmentModel");
 
+// Get all employees
 const getAllEmployee = async (req, res, next) => {
-  let emp;
-  // Get all Employee
   try {
-    emp = await Employee.find();
+    const emp = await Employee.find();
+    if (!emp || emp.length === 0) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+    return res.status(200).json({ emp });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  // not found
-  if (!emp) {
-    return res.status(404).json({ message: "Employee not found" });
-  }
-  // Display all emp
-  return res.status(200).json({ emp });
 };
 
-// data Insert
+// Add a new employee
 const addEmployee = async (req, res, next) => {
-  const { name, gmail, address, phone } = req.body;
-
-  let emp;
-
+  const { name, gmail, address, phone } = sanitize(req.body);
   try {
-    emp = new Employee({
+    const emp = new Employee({
       name,
       gmail,
       address,
       phone,
     });
     await emp.save();
+    return res.status(201).json({ emp });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Unable to add Employee" });
   }
-  // not insert emps
-  if (!emp) {
-    return res.status(404).json({ message: "unable to add Employee" });
-  }
-  return res.status(200).json({ emp });
 };
 
-//Get by Id
+// Get employee by ID
 const getById = async (req, res, next) => {
-  const id = req.params.id;
-
-  let emp;
-
+  const id = sanitize(req.params.id);
   try {
-    emp = await Employee.findById(id);
+    const emp = await Employee.findById(id);
+    if (!emp) {
+      return res.status(404).json({ message: "Employee Not Found" });
+    }
+    return res.status(200).json({ emp });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  // not available emps
-  if (!emp) {
-    return res.status(404).json({ message: "Employee Not Found" });
-  }
-  return res.status(200).json({ emp });
 };
 
-//Update emp Details
+// Update employee details
 const updateEmployee = async (req, res, next) => {
-  const id = req.params.id;
-  const { name, gmail, address, phone } = req.body;
-
-  let emps;
+  const id = sanitize(req.params.id);
+  const { name, gmail, address, phone } = sanitize(req.body);
 
   try {
-    emps = await Employee.findByIdAndUpdate(id, {
-      name: name,
-      gmail: gmail,
-      address: address,
-      phone: phone,
-    });
-    emps = await emps.save();
+    let emps = await Employee.findByIdAndUpdate(
+      id,
+      { name, gmail, address, phone },
+      { new: true }
+    );
+
+    if (!emps) {
+      return res
+        .status(404)
+        .json({ message: "Unable to Update Employee Details" });
+    }
+    return res.status(200).json({ emps });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  if (!emps) {
-    return res
-      .status(404)
-      .json({ message: "Unable to Update Employee Details" });
-  }
-  return res.status(200).json({ emps });
 };
 
-//Delete emp Details
+// Delete employee
 const deleteEmployee = async (req, res, next) => {
-  const id = req.params.id;
-
-  let emp;
-
+  const id = sanitize(req.params.id);
   try {
-    emp = await Employee.findByIdAndDelete(id);
+    const emp = await Employee.findByIdAndDelete(id);
+    if (!emp) {
+      return res
+        .status(404)
+        .json({ message: "Unable to Delete Employee Details" });
+    }
+    return res.status(200).json({ emp });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  if (!emp) {
-    return res
-      .status(404)
-      .json({ message: "Unable to Delete Employee Details" });
-  }
-  return res.status(200).json({ emp });
 };
 
 exports.getAllEmployee = getAllEmployee;

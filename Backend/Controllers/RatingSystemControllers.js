@@ -1,29 +1,26 @@
+const sanitize = require("mongo-sanitize");
 const Rating = require("../Model/RatingSystemModel");
 
+// Get all ratings
 const getAllRating = async (req, res, next) => {
-  let rate;
-  // Get all Rating
   try {
-    rate = await Rating.find();
+    const rate = await Rating.find();
+    if (!rate || rate.length === 0) {
+      return res.status(404).json({ message: "Rating not found" });
+    }
+    return res.status(200).json({ rate });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  // not found
-  if (!rate) {
-    return res.status(404).json({ message: "Rating not found" });
-  }
-  // Display all rate
-  return res.status(200).json({ rate });
 };
 
-// data Insert
+// Add a new rating
 const addRating = async (req, res, next) => {
-  const { imgurl, username, email, rating, date, comment } = req.body;
-
-  let rate;
+  const { imgurl, username, email, rating, date, comment } = sanitize(req.body);
 
   try {
-    rate = new Rating({
+    const rate = new Rating({
       imgurl,
       username,
       email,
@@ -32,75 +29,65 @@ const addRating = async (req, res, next) => {
       comment,
     });
     await rate.save();
+    return res.status(201).json({ rate });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Unable to add Rating" });
   }
-  // not insert rates
-  if (!rate) {
-    return res.status(404).json({ message: "unable to add Rating" });
-  }
-  return res.status(200).json({ rate });
 };
 
-//Get by Id
+// Get rating by ID
 const getById = async (req, res, next) => {
-  const id = req.params.id;
-
-  let rate;
+  const id = sanitize(req.params.id);
 
   try {
-    rate = await Rating.findById(id);
+    const rate = await Rating.findById(id);
+    if (!rate) {
+      return res.status(404).json({ message: "Rating Not Found" });
+    }
+    return res.status(200).json({ rate });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  // not available rates
-  if (!rate) {
-    return res.status(404).json({ message: "Rating Not Found" });
-  }
-  return res.status(200).json({ rate });
 };
 
-//Update rate Details
+// Update rating
 const updateRating = async (req, res, next) => {
-  const id = req.params.id;
-  const { imgurl, username, email, rating, date, comment } = req.body;
-
-  let rates;
+  const id = sanitize(req.params.id);
+  const { imgurl, username, email, rating, date, comment } = sanitize(req.body);
 
   try {
-    rates = await Rating.findByIdAndUpdate(id, {
-      imgurl: imgurl,
-      username: username,
-      email: email,
-      rating: rating,
-      date: date,
-      comment: comment,
-    });
-    rates = await rates.save();
+    let rates = await Rating.findByIdAndUpdate(
+      id,
+      { imgurl, username, email, rating, date, comment },
+      { new: true }
+    );
+
+    if (!rates) {
+      return res.status(404).json({ message: "Unable to Update Rating Details" });
+    }
+    return res.status(200).json({ rates });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  if (!rates) {
-    return res.status(404).json({ message: "Unable to Update Rating Details" });
-  }
-  return res.status(200).json({ rates });
 };
 
-//Delete rate Details
+// Delete rating
 const deleteRating = async (req, res, next) => {
-  const id = req.params.id;
-
-  let rate;
+  const id = sanitize(req.params.id);
 
   try {
-    rate = await Rating.findByIdAndDelete(id);
+    const rate = await Rating.findByIdAndDelete(id);
+    if (!rate) {
+      return res.status(404).json({ message: "Unable to Delete Rating Details" });
+    }
+    return res.status(200).json({ rate });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  if (!rate) {
-    return res.status(404).json({ message: "Unable to Delete Rating Details" });
-  }
-  return res.status(200).json({ rate });
 };
 
 exports.getAllRating = getAllRating;

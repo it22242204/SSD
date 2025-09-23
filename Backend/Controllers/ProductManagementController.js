@@ -1,19 +1,23 @@
+const sanitize = require("mongo-sanitize");
 const Product = require("../Model/ProductManagementModel");
 
 // Get all products
 const getAllProducts = async (req, res) => {
   try {
     const products = await Product.find();
+    if (!products || products.length === 0) {
+      return res.status(404).json({ message: "No products found" });
+    }
     res.status(200).json({ products });
   } catch (err) {
-    console.error(err); // Use console.error for better visibility in logs
+    console.error(err);
     res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Get product by ID
 const getProductById = async (req, res) => {
-  const id = req.params.id;
+  const id = sanitize(req.params.id);
   try {
     const product = await Product.findById(id);
     if (!product) {
@@ -28,13 +32,11 @@ const getProductById = async (req, res) => {
 
 // Add a new product
 const addProduct = async (req, res) => {
-  const { name, image, location, price, code } = req.body;
+  const { name, image, location, price, code } = sanitize(req.body);
 
-  // Validate input
   if (!name) {
-    return res.status(400).json({ message: "Name is required" }); // Validate required field
+    return res.status(400).json({ message: "Name is required" });
   }
-  // Optional: Add more validations for other fields here
 
   try {
     const product = new Product({
@@ -45,7 +47,7 @@ const addProduct = async (req, res) => {
       code,
     });
     await product.save();
-    res.status(201).json({ product }); // Ensure response structure is clear
+    res.status(201).json({ product });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Internal server error" });
@@ -54,12 +56,11 @@ const addProduct = async (req, res) => {
 
 // Update a product
 const updateProduct = async (req, res) => {
-  const id = req.params.id;
-  const { name, image, location, price, code } = req.body;
+  const id = sanitize(req.params.id);
+  const { name, image, location, price, code } = sanitize(req.body);
 
-  // Validate input
   if (!name) {
-    return res.status(400).json({ message: "Name is required" }); // Validate required field
+    return res.status(400).json({ message: "Name is required" });
   }
 
   try {
@@ -68,7 +69,6 @@ const updateProduct = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    // Update product properties
     product.name = name;
     product.image = image;
     product.location = location;
@@ -85,7 +85,7 @@ const updateProduct = async (req, res) => {
 
 // Delete a product
 const deleteProduct = async (req, res) => {
-  const id = req.params.id;
+  const id = sanitize(req.params.id);
   try {
     const product = await Product.findByIdAndDelete(id);
     if (!product) {

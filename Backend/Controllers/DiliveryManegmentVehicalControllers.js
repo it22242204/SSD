@@ -1,108 +1,93 @@
+const sanitize = require("mongo-sanitize");
 const Vehical = require("../Model/DeliveryManegmentVehicalModel");
 
+// Get all vehicles
 const getAllVehical = async (req, res, next) => {
-  let vehi;
-  // Get all Vehical
   try {
-    vehi = await Vehical.find();
+    const vehi = await Vehical.find();
+    if (!vehi || vehi.length === 0) {
+      return res.status(404).json({ message: "Vehical not found" });
+    }
+    return res.status(200).json({ vehi });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  // not found
-  if (!vehi) {
-    return res.status(404).json({ message: "Vehical not found" });
-  }
-  // Display all vehi
-  return res.status(200).json({ vehi });
 };
 
-// data Insert
+// Add a new vehicle
 const addVehical = async (req, res, next) => {
-  const { name, gmail, address, phone,numberplate } = req.body;
-
-  let vehi;
-
+  const { name, gmail, address, phone, numberplate } = sanitize(req.body);
   try {
-    vehi = new Vehical({
+    const vehi = new Vehical({
       name,
       gmail,
       address,
       phone,
-      numberplate
+      numberplate,
     });
     await vehi.save();
+    return res.status(201).json({ vehi });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Unable to add Vehical" });
   }
-  // not insert vehis
-  if (!vehi) {
-    return res.status(404).json({ message: "unable to add Vehical" });
-  }
-  return res.status(200).json({ vehi });
 };
 
-//Get by Id
+// Get vehicle by ID
 const getById = async (req, res, next) => {
-  const id = req.params.id;
-
-  let vehi;
-
+  const id = sanitize(req.params.id);
   try {
-    vehi = await Vehical.findById(id);
+    const vehi = await Vehical.findById(id);
+    if (!vehi) {
+      return res.status(404).json({ message: "Vehical Not Found" });
+    }
+    return res.status(200).json({ vehi });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  // not available vehis
-  if (!vehi) {
-    return res.status(404).json({ message: "Vehical Not Found" });
-  }
-  return res.status(200).json({ vehi });
 };
 
-//Update vehi Details
+// Update vehicle details
 const updateVehical = async (req, res, next) => {
-  const id = req.params.id;
-  const { name, gmail, address, phone,numberplate } = req.body;
-
-  let vehis;
+  const id = sanitize(req.params.id);
+  const { name, gmail, address, phone, numberplate } = sanitize(req.body);
 
   try {
-    vehis = await Vehical.findByIdAndUpdate(id, {
-      name: name,
-      gmail: gmail,
-      address: address,
-      phone: phone,
-      numberplate:numberplate,
-    });
-    vehis = await vehis.save();
+    let vehis = await Vehical.findByIdAndUpdate(
+      id,
+      { name, gmail, address, phone, numberplate },
+      { new: true }
+    );
+
+    if (!vehis) {
+      return res
+        .status(404)
+        .json({ message: "Unable to Update Vehical Details" });
+    }
+    return res.status(200).json({ vehis });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  if (!vehis) {
-    return res
-      .status(404)
-      .json({ message: "Unable to Update Vehical Details" });
-  }
-  return res.status(200).json({ vehis });
 };
 
-//Delete vehi Details
+// Delete vehicle
 const deleteVehical = async (req, res, next) => {
-  const id = req.params.id;
-
-  let vehi;
-
+  const id = sanitize(req.params.id);
   try {
-    vehi = await Vehical.findByIdAndDelete(id);
+    const vehi = await Vehical.findByIdAndDelete(id);
+    if (!vehi) {
+      return res
+        .status(404)
+        .json({ message: "Unable to Delete Vehical Details" });
+    }
+    return res.status(200).json({ vehi });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  if (!vehi) {
-    return res
-      .status(404)
-      .json({ message: "Unable to Delete Vehical Details" });
-  }
-  return res.status(200).json({ vehi });
 };
 
 exports.getAllVehical = getAllVehical;

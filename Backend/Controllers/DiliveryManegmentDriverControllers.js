@@ -1,106 +1,92 @@
+const sanitize = require("mongo-sanitize");
 const Drive = require("../Model/DeliveryManegmentDriveModel");
 
+// Get all drivers
 const getAllDrive = async (req, res, next) => {
-  let driv;
-  // Get all Drive
   try {
-    driv = await Drive.find();
+    const driv = await Drive.find();
+    if (!driv || driv.length === 0) {
+      return res.status(404).json({ message: "Drive not found" });
+    }
+    return res.status(200).json({ driv });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  // not found
-  if (!driv) {
-    return res.status(404).json({ message: "Drive not found" });
-  }
-  // Display all driv
-  return res.status(200).json({ driv });
 };
 
-// data Insert
+// Add a new driver
 const addDrive = async (req, res, next) => {
-  const { name, gmail, address, phone } = req.body;
-
-  let driv;
-
+  const { name, gmail, address, phone } = sanitize(req.body);
   try {
-    driv = new Drive({
+    const driv = new Drive({
       name,
       gmail,
       address,
       phone,
     });
     await driv.save();
+    return res.status(201).json({ driv });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Unable to add Drive" });
   }
-  // not insert drivs
-  if (!driv) {
-    return res.status(404).json({ message: "unable to add Drive" });
-  }
-  return res.status(200).json({ driv });
 };
 
-//Get by Id
+// Get driver by ID
 const getById = async (req, res, next) => {
-  const id = req.params.id;
-
-  let driv;
-
+  const id = sanitize(req.params.id);
   try {
-    driv = await Drive.findById(id);
+    const driv = await Drive.findById(id);
+    if (!driv) {
+      return res.status(404).json({ message: "Drive Not Found" });
+    }
+    return res.status(200).json({ driv });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  // not available drivs
-  if (!driv) {
-    return res.status(404).json({ message: "Drive Not Found" });
-  }
-  return res.status(200).json({ driv });
 };
 
-//Update driv Details
+// Update driver details
 const updateDrive = async (req, res, next) => {
-  const id = req.params.id;
-  const { name, gmail, address, phone } = req.body;
-
-  let drivs;
+  const id = sanitize(req.params.id);
+  const { name, gmail, address, phone } = sanitize(req.body);
 
   try {
-    drivs = await Drive.findByIdAndUpdate(id, {
-      name: name,
-      gmail: gmail,
-      address: address,
-      phone: phone,
-    });
-    drivs = await drivs.save();
+    let drivs = await Drive.findByIdAndUpdate(
+      id,
+      { name, gmail, address, phone },
+      { new: true }
+    );
+
+    if (!drivs) {
+      return res
+        .status(404)
+        .json({ message: "Unable to Update Drive Details" });
+    }
+    return res.status(200).json({ drivs });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  if (!drivs) {
-    return res
-      .status(404)
-      .json({ message: "Unable to Update Drive Details" });
-  }
-  return res.status(200).json({ drivs });
 };
 
-//Delete driv Details
+// Delete driver
 const deleteDrive = async (req, res, next) => {
-  const id = req.params.id;
-
-  let driv;
-
+  const id = sanitize(req.params.id);
   try {
-    driv = await Drive.findByIdAndDelete(id);
+    const driv = await Drive.findByIdAndDelete(id);
+    if (!driv) {
+      return res
+        .status(404)
+        .json({ message: "Unable to Delete Drive Details" });
+    }
+    return res.status(200).json({ driv });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  if (!driv) {
-    return res
-      .status(404)
-      .json({ message: "Unable to Delete Drive Details" });
-  }
-  return res.status(200).json({ driv });
 };
 
 exports.getAllDrive = getAllDrive;
