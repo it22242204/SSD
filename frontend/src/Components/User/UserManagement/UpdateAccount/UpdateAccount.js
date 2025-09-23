@@ -4,6 +4,14 @@ import { useParams } from "react-router-dom";
 import "../User.css";
 import AfterNav from "../../Home/NavBar/AfterNav";
 import Footer from "../../../Footer/Footer";
+
+// Helper to get CSRF token cookie by name
+function getCookie(name) {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  if (match) return match[2];
+  return null;
+}
+
 function UpdateAccount() {
   const [user, setUser] = useState({
     name: "",
@@ -27,7 +35,11 @@ function UpdateAccount() {
 
   const sendRequest = async () => {
     try {
-      await axios.put(`http://localhost:8080/user/${id}`, user);
+      const csrfToken = getCookie('XSRF-TOKEN');
+      await axios.put(`http://localhost:8080/user/${id}`, user, {
+        headers: { 'X-CSRF-Token': csrfToken },
+        withCredentials: true,
+      });
     } catch (error) {
       console.error("Error updating user:", error);
     }
@@ -111,7 +123,7 @@ function UpdateAccount() {
           </form>
         </div>
       </div>
-      <Footer/>
+      <Footer />
     </div>
   );
 }

@@ -5,23 +5,40 @@ import "../User.css";
 import AfterNav from "../../Home/NavBar/AfterNav";
 import Footer from "../../../Footer/Footer";
 
+// Helper to get CSRF token cookie by name
+function getCookie(name) {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  if (match) return match[2];
+  return null;
+}
+
 function UserProfile() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [paymentDetails, setPaymentDetails] = useState([]);
-  const [showRequests, setShowRequests] = useState(false); // State to control visibility of requests
+  const [showRequests, setShowRequests] = useState(false);
   const history = useNavigate();
 
   useEffect(() => {
     async function fetchUserDetails() {
       const token = localStorage.getItem("token");
       try {
-        const response = await axios.post("http://localhost:8080/profile", { token });
+        const csrfToken = getCookie('XSRF-TOKEN');
+        const response = await axios.post(
+          "http://localhost:8080/profile",
+          { token },
+          {
+            headers: {
+              'X-CSRF-Token': csrfToken
+            },
+            withCredentials: true,
+          }
+        );
         if (response.data.status === "ok") {
-          setUser(response.data.user); // Set user data
+          setUser(response.data.user);
           localStorage.setItem("userEmail", response.data.user.email);
           localStorage.setItem("userAddress", response.data.user.address);
-          fetchData(response.data.user.email); // Fetch payment details with user email
+          fetchData(response.data.user.email);
         } else {
           console.error("Error retrieving user details:", response.data.data);
         }
@@ -35,12 +52,11 @@ function UserProfile() {
     const fetchData = async (userEmail) => {
       try {
         const response = await axios.get('http://localhost:8080/api/payment/');
-        console.log(response.data); 
+        console.log(response.data);
 
         if (Array.isArray(response.data)) {
-          // Filter payments by matching user email
           const userPayments = response.data.filter(payment => payment.email === userEmail);
-          setPaymentDetails(userPayments); // Set filtered payment details
+          setPaymentDetails(userPayments);
         } else {
           console.error('Unexpected structure:', response.data);
           alert('Unexpected response structure. Please try again later.');
@@ -61,17 +77,22 @@ function UserProfile() {
 
     if (userConfirmed) {
       try {
-        await axios.delete(`http://localhost:8080/user/${user._id}`);
+        const csrfToken = getCookie('XSRF-TOKEN');
+        await axios.delete(`http://localhost:8080/user/${user._id}`, {
+          headers: {
+            'X-CSRF-Token': csrfToken
+          },
+          withCredentials: true,
+        });
         window.alert("Account details deleted successfully!");
         history("/");
-        window.location.reload(); // Reload the page
+        window.location.reload();
       } catch (error) {
         console.error("Error deleting account details:", error);
       }
     }
   };
 
-  // Function to toggle the visibility of recycle service requests
   const toggleRequests = () => {
     setShowRequests(!showRequests);
   };
@@ -112,12 +133,12 @@ function UserProfile() {
             </div>
           </div>
         </div>
-        
+
         <div className="btn_container">
           <button onClick={toggleRequests} className="btn_dash_admin_ash">
             {showRequests ? "Hide your Recycle Service Requests" : "View your Recycle Service Requests"}
           </button>
-          
+
           {showRequests && (
             <>
               <h2>Recycle Service Requests</h2>
