@@ -4,6 +4,7 @@ import Form from "react-bootstrap/Form";
 import { addTaskToServer } from "../../slices/tasksSlice";
 import { useDispatch } from "react-redux";
 import "./addtask.css";
+import validator from "validator";
 
 const AddTask = () => {
   const dispatch = useDispatch();
@@ -13,11 +14,10 @@ const AddTask = () => {
   const [topic, setTopic] = useState("");
   const [description, setDescription] = useState("");
 
-  const validateEmail = (email) => {
-    // Regular expression for basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
+const validateEmail = (email) => {
+  // Use validator library's isEmail function
+  return validator.isEmail(email);
+};
 
   const addTask = (e) => {
     e.preventDefault();
