@@ -1,25 +1,23 @@
+const sanitize = require("mongo-sanitize");
 const SpecialPayment = require("../Model/SpecialPaymentModel");
 
 // Get all special payments
-const getAllSpecialPayments = async (req, res, next) => {
-  let payments;
+const getAllSpecialPayments = async (req, res) => {
   try {
-    payments = await SpecialPayment.find();
+    const payments = await SpecialPayment.find();
+    if (!payments || payments.length === 0) {
+      return res.status(404).json({ message: "No payments found" });
+    }
+    return res.status(200).json({ payments });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Server Error" });
   }
-  if (!payments || payments.length === 0) {
-    return res.status(404).json({ message: "No payments found" });
-  }
-  return res.status(200).json({ payments });
 };
 
 // Add a new special payment
-const addSpecialPayment = async (req, res, next) => {
-  const { contactname, amount, currency, cardNumber, cardExpiry, cvv, status, colletionOption } = req.body;
-
-  const newPayment = new SpecialPayment({
+const addSpecialPayment = async (req, res) => {
+  const {
     contactname,
     amount,
     currency,
@@ -27,43 +25,61 @@ const addSpecialPayment = async (req, res, next) => {
     cardExpiry,
     cvv,
     status,
-    colletionOption, // Added colletionOption
-  });
+    colletionOption,
+  } = sanitize(req.body);
 
   try {
+    const newPayment = new SpecialPayment({
+      contactname,
+      amount,
+      currency,
+      cardNumber,
+      cardExpiry,
+      cvv,
+      status,
+      colletionOption,
+    });
+
     await newPayment.save();
+    return res.status(201).json({ payment: newPayment });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Server Error" });
   }
-  return res.status(201).json({ payment: newPayment });
 };
 
-// Get a single special payment by ID
-const getSpecialPaymentById = async (req, res, next) => {
-  const id = req.params.id;
+// Get payment by ID
+const getSpecialPaymentById = async (req, res) => {
+  const id = sanitize(req.params.id);
 
-  let payment;
   try {
-    payment = await SpecialPayment.findById(id);
+    const payment = await SpecialPayment.findById(id);
+    if (!payment) {
+      return res.status(404).json({ message: "Payment not found" });
+    }
+    return res.status(200).json({ payment });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Server Error" });
   }
-  if (!payment) {
-    return res.status(404).json({ message: "Payment not found" });
-  }
-  return res.status(200).json({ payment });
 };
 
-// Update a special payment by ID
-const updateSpecialPayment = async (req, res, next) => {
-  const id = req.params.id;
-  const { contactname, amount, currency, cardNumber, cardExpiry, cvv, status, colletionOption } = req.body;
+// Update payment by ID
+const updateSpecialPayment = async (req, res) => {
+  const id = sanitize(req.params.id);
+  const {
+    contactname,
+    amount,
+    currency,
+    cardNumber,
+    cardExpiry,
+    cvv,
+    status,
+    colletionOption,
+  } = sanitize(req.body);
 
-  let payment;
   try {
-    payment = await SpecialPayment.findByIdAndUpdate(
+    const payment = await SpecialPayment.findByIdAndUpdate(
       id,
       {
         contactname,
@@ -73,41 +89,62 @@ const updateSpecialPayment = async (req, res, next) => {
         cardExpiry,
         cvv,
         status,
-        colletionOption, // Added colletionOption for update
+        colletionOption,
       },
       { new: true }
     );
+
+    if (!payment) {
+      return res.status(404).json({ message: "Payment not found" });
+    }
+    return res.status(200).json({ payment });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Server Error" });
   }
-  if (!payment) {
-    return res.status(404).json({ message: "Payment not found" });
-  }
-  return res.status(200).json({ payment });
 };
 
-// Delete a special payment by ID
-const deleteSpecialPayment = async (req, res, next) => {
-  const id = req.params.id;
+// Delete payment
+const deleteSpecialPayment = async (req, res) => {
+  const id = sanitize(req.params.id);
 
-  let payment;
   try {
-    payment = await SpecialPayment.findByIdAndDelete(id);
+    const payment = await SpecialPayment.findByIdAndDelete(id);
+    if (!payment) {
+      return res.status(404).json({ message: "Payment not found" });
+    }
+    return res.status(200).json({ message: "Payment deleted successfully" });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Server Error" });
   }
-  if (!payment) {
-    return res.status(404).json({ message: "Payment not found" });
-  }
-  return res.status(200).json({ message: "Payment deleted successfully" });
 };
+const createSpecialPayment = async (req, res) => {
+  try {
+    const safeBody = sanitize(req.body);
+    const { userId, details } = safeBody;
 
+    if (!userId || !details) {
+      return res.status(400).json({ error: "Missing fields" });
+    }
+
+    const sp = new SpecialPayment({
+      userId: sanitize(userId),
+      details: sanitize(details),
+    });
+
+    await sp.save();
+    return res.status(201).json({ status: "ok", id: sp._id });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
 module.exports = {
   getAllSpecialPayments,
   addSpecialPayment,
   getSpecialPaymentById,
   updateSpecialPayment,
   deleteSpecialPayment,
+  createSpecialPayment,
 };

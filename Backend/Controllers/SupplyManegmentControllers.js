@@ -1,112 +1,127 @@
+const sanitize = require("mongo-sanitize");
 const Supplier = require("../Model/SupplyManegmentModel");
 
-const getAllSupplier = async (req, res, next) => {
-  let supply;
-  // Get all Supplier
+// Get all suppliers
+const getAllSupplier = async (req, res) => {
   try {
-    supply = await Supplier.find();
+    const supply = await Supplier.find();
+    if (!supply || supply.length === 0) {
+      return res.status(404).json({ message: "Supplier not found" });
+    }
+    return res.status(200).json({ supply });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Server Error" });
   }
-  // not found
-  if (!supply) {
-    return res.status(404).json({ message: "Supplier not found" });
-  }
-  // Display all supply
-  return res.status(200).json({ supply });
 };
 
-// data Insert
-const addSupplier = async (req, res, next) => {
-  const { firstname, lastname, phone, address, gmail } = req.body;
-
-  let supply;
+// Add supplier
+const addSupplier = async (req, res) => {
+  const { firstname, lastname, phone, address, gmail } = sanitize(req.body);
 
   try {
-    supply = new Supplier({
+    const supply = new Supplier({
       firstname,
       lastname,
       phone,
       address,
       gmail,
     });
+
     await supply.save();
+    return res.status(201).json({ supply });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Unable to add Supplier" });
   }
-  // not insert supplys
-  if (!supply) {
-    return res.status(404).json({ message: "unable to add Supplier" });
-  }
-  return res.status(200).json({ supply });
 };
 
-//Get by Id
-const getById = async (req, res, next) => {
-  const id = req.params.id;
-
-  let supply;
+// Get supplier by Id
+const getById = async (req, res) => {
+  const id = sanitize(req.params.id);
 
   try {
-    supply = await Supplier.findById(id);
+    const supply = await Supplier.findById(id);
+    if (!supply) {
+      return res.status(404).json({ message: "Supplier Not Found" });
+    }
+    return res.status(200).json({ supply });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ message: "Server Error" });
   }
-  // not available supplys
-  if (!supply) {
-    return res.status(404).json({ message: "Supplier Not Found" });
-  }
-  return res.status(200).json({ supply });
 };
 
-//Update supply Details
-const updateSupplier = async (req, res, next) => {
-  const id = req.params.id;
-  const { firstname, lastname, phone, address, gmail } = req.body;
-
-  let supplys;
+// Update supplier
+const updateSupplier = async (req, res) => {
+  const id = sanitize(req.params.id);
+  const { firstname, lastname, phone, address, gmail } = sanitize(req.body);
 
   try {
-    supplys = await Supplier.findByIdAndUpdate(id, {
-        firstname: firstname,
-        lastname: lastname,
-        phone: phone,
-        address: address,
-        gmail: gmail,
+    let supply = await Supplier.findByIdAndUpdate(
+      id,
+      {
+        firstname,
+        lastname,
+        phone,
+        address,
+        gmail,
+      },
+      { new: true }
+    );
+
+    if (!supply) {
+      return res.status(404).json({ message: "Unable to Update Supplier Details" });
+    }
+
+    return res.status(200).json({ supply });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server Error" });
+  }
+};
+
+// Delete supplier
+const deleteSupplier = async (req, res) => {
+  const id = sanitize(req.params.id);
+
+  try {
+    const supply = await Supplier.findByIdAndDelete(id);
+    if (!supply) {
+      return res.status(404).json({ message: "Unable to Delete Supplier Details" });
+    }
+    return res.status(200).json({ supply });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server Error" });
+  }
+};
+const addSupply = async (req, res) => {
+  try {
+    const safeBody = sanitize(req.body);
+    const { supplierName, product } = safeBody;
+
+    if (!supplierName || !product) {
+      return res.status(400).json({ error: "Missing fields" });
+    }
+
+    const s = new Supplier({
+      supplierName: sanitize(supplierName),
+      product: sanitize(product),
     });
-    supplys = await supplys.save();
+
+    await s.save();
+    return res.status(201).json({ status: "ok", id: s._id });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return res.status(500).json({ error: "Server error" });
   }
-  if (!supplys) {
-    return res
-      .status(404)
-      .json({ message: "Unable to Update Supplier Details" });
-  }
-  return res.status(200).json({ supplys });
 };
-
-//Delete supply Details
-const deleteSupplier = async (req, res, next) => {
-  const id = req.params.id;
-
-  let supply;
-
-  try {
-    supply = await Supplier.findByIdAndDelete(id);
-  } catch (err) {
-    console.log(err);
-  }
-  if (!supply) {
-    return res
-      .status(404)
-      .json({ message: "Unable to Delete Supplier Details" });
-  }
-  return res.status(200).json({ supply });
+module.exports = {
+  getAllSupplier,
+  addSupplier,
+  getById,
+  updateSupplier,
+  deleteSupplier,
+  addSupply,
 };
-
-exports.getAllSupplier = getAllSupplier;
-exports.addSupplier = addSupplier;
-exports.getById = getById;
-exports.updateSupplier = updateSupplier;
-exports.deleteSupplier = deleteSupplier;

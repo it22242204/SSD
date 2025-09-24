@@ -1,74 +1,124 @@
 const mongoose = require("mongoose");
-const taskModel = require("../Model/TaskModel");
+const sanitize = require("mongo-sanitize");
+const Task = require("../Model/TaskModel");
 
-//To create a task - POST
-const createTask = async (req,res)=>{
-    const {customername,email,topic,description,responce,ticketstatus} = req.body;
+// Create Task
+const createTask = async (req, res) => {
+  try {
+    const safeBody = sanitize(req.body);
+    const {
+      customername,
+      email,
+      topic,
+      description,
+      responce,
+      ticketstatus,
+    } = safeBody;
 
-    try{
-        const Task = await taskModel.create({customername,email,topic,description,responce,ticketstatus});
-        res.status(200).json(task)
-    }catch(e){
-        res.status(400).json({error:e.message});
+    if (!customername || !topic) {
+      return res.status(400).json({ error: "Missing required fields" });
     }
-};
-// to get all the tasks
-const getTasks = async (req,res)=>{
-    try{
-        const tasks =await taskModel.find({});
-        res.status(200).json(tasks);
 
-    }catch(e){
-        res.status(400).json({error:e.message});
-    }
-};
+    const task = new Task({
+      customername: sanitize(customername),
+      email: sanitize(email),
+      topic: sanitize(topic),
+      description: sanitize(description),
+      responce: sanitize(responce),
+      ticketstatus: sanitize(ticketstatus),
+    });
 
-// to get a single task
-const getSingleTask = async (req,res)=>{
-    const{id} = req.params
-    if(!mongoose.Types.ObjectId.isValid(id)){
-        return res.status(404).json({error:'Task not Found'})
-    }
-    try{
-        const singleTask = await taskModel.findById(id)
-        res.status(200).json(singleTask)
-    }catch(e){
-        res.status(400).json({error:e.message});
-    }
-}
-
-// to update the task
-const updateTask = async (req,res) => {
-    const{id} = req.params
-    if(!mongoose.Types.ObjectId.isValid(id)){
-        return res.status(404).json({error:'Task not Found'})
-    }
-    try{
-         const task = await taskModel.findByIdAndUpdate({
-            _id:id
-         },
-         {
-            ...req.body
-         })
-         res.status(200).json(task);
-    }catch(e){
-        res.status(400).json({error:e.message});
-    }
+    await task.save();
+    return res.status(201).json({ task });
+  } catch (e) {
+    console.error(e);
+    return res.status(400).json({ error: e.message });
+  }
 };
 
-//Delete task - Delete
-const deleteTask = async(req,res)=>{
-    const{id} = req.params
-    if(!mongoose.Types.ObjectId.isValid(id)){
-        return res.status(404).json({error:'Task not Found'})
+// Get all tasks
+const getTasks = async (req, res) => {
+  try {
+    const tasks = await Task.find({});
+    if (!tasks || tasks.length === 0) {
+      return res.status(404).json({ message: "No tasks found" });
     }
-    try{
-        const task = await taskModel.findByIdAndDelete(id);
-        res.status(200).json(task);
-    }catch(e){
-        res.status(400).json({error:e.message});
-    }
+    res.status(200).json(tasks);
+  } catch (e) {
+    console.error(e);
+    res.status(400).json({ error: e.message });
+  }
 };
-//comment by asho and 
 
-module.exports = {createTask,getTasks,getSingleTask,updateTask,deleteTask};
+// Get single task
+const getSingleTask = async (req, res) => {
+  const id = sanitize(req.params.id);
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(404).json({ error: "Task not Found" });
+  }
+  try {
+    const singleTask = await Task.findById(id);
+    if (!singleTask) {
+      return res.status(404).json({ error: "Task not Found" });
+    }
+    res.status(200).json(singleTask);
+  } catch (e) {
+    console.error(e);
+    res.status(400).json({ error: e.message });
+  }
+};
+
+// Update task
+const updateTask = async (req, res) => {
+  const id = sanitize(req.params.id);
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(404).json({ error: "Task not Found" });
+  }
+
+  try {
+    const safeBody = sanitize(req.body);
+    const task = await Task.findByIdAndUpdate(
+      { _id: id },
+      { ...safeBody },
+      { new: true }
+    );
+
+    if (!task) {
+      return res.status(404).json({ error: "Task not Found" });
+    }
+
+    res.status(200).json(task);
+  } catch (e) {
+    console.error(e);
+    res.status(400).json({ error: e.message });
+  }
+};
+
+// Delete task
+const deleteTask = async (req, res) => {
+  const id = sanitize(req.params.id);
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(404).json({ error: "Task not Found" });
+  }
+
+  try {
+    const task = await Task.findByIdAndDelete(id);
+    if (!task) {
+      return res.status(404).json({ error: "Task not Found" });
+    }
+    res.status(200).json(task);
+  } catch (e) {
+    console.error(e);
+    res.status(400).json({ error: e.message });
+  }
+};
+module.exports = {
+  createTask,
+  getTasks,
+  getSingleTask,
+  updateTask,
+  deleteTask,
+};
