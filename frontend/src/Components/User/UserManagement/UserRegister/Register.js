@@ -4,6 +4,13 @@ import "../User.css";
 import regiimg from "../img/reg.avif";
 import Footer from '../../../Footer/Footer';
 
+// Helper to get CSRF token cookie by name
+function getCookie(name) {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  if (match) return match[2];
+  return null;
+}
+
 function Register() {
   const [user, setUser] = useState({
     name: "",
@@ -22,14 +29,17 @@ function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Form validation
     if (user.password !== user.confirmPassword) {
       alert("Passwords do not match");
       return;
     }
 
     try {
-      const response = await axios.post("http://localhost:8080/user", user);
+      const csrfToken = getCookie('XSRF-TOKEN');
+      const response = await axios.post("http://localhost:8080/user", user, {
+        headers: { 'X-CSRF-Token': csrfToken },
+        withCredentials: true,
+      });
       if (response.data && response.data.err === "user exists") {
         alert(
           "User with this email already exists. Please use a different email."
@@ -47,7 +57,6 @@ function Register() {
   return (
     <div className="auth_box">
       <div>
-        {" "}
         <h1 className="login-topic">Join With Us..!</h1>
         <br />
         <div className="user_tabl_towcolum">
@@ -145,6 +154,7 @@ function Register() {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

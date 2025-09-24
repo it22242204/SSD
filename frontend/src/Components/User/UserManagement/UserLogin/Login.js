@@ -4,6 +4,14 @@ import axios from "axios";
 import "../User.css";
 import logimg from "../img/log.jpg";
 import Footer from "../../../Footer/Footer";
+
+// Helper to get CSRF token cookie by name
+function getCookie(name) {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  if (match) return match[2];
+  return null;
+}
+
 function Login() {
   const history = useNavigate();
   const [user, setUser] = useState({
@@ -19,8 +27,7 @@ function Login() {
     try {
       const response = await sendRequest();
       if (response.token) {
-        // If token exists in the response
-        localStorage.setItem("token", response.token); // Store token in localStorage
+        localStorage.setItem("token", response.token);
         alert("Login Success..!");
         window.location.href = "/afetrhome";
       } else {
@@ -32,11 +39,21 @@ function Login() {
   };
 
   const sendRequest = async () => {
+    const csrfToken = getCookie('XSRF-TOKEN');
     try {
-      const res = await axios.post("http://localhost:8080/login", {
-        email: user.email,
-        password: user.password,
-      });
+      const res = await axios.post(
+        "http://localhost:8080/login",
+        {
+          email: user.email,
+          password: user.password,
+        },
+        {
+          headers: {
+            'X-CSRF-Token': csrfToken
+          },
+          withCredentials: true,
+        }
+      );
       return res.data;
     } catch (err) {
       throw new Error("Failed to login");
